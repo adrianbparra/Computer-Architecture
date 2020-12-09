@@ -11,15 +11,20 @@ class CPU:
         self.reg = [0] * 8
         self.running = True
         self.pc = 0
+        self.SP = 0xF4
         self.LDI = 0b10000010
         self.PRN = 0b01000111
         self.HLT = 0b00000001
         self.MUL = 0b10100010
+        self.PUSH = 0b01000101
+        self.POP = 0b01000110
         self.branchtable = {}
         self.branchtable[self.LDI] = self.handle_LDI
         self.branchtable[self.PRN] = self.handle_PRN
         self.branchtable[self.HLT] = self.handle_HLT
         self.branchtable[self.MUL] = self.handle_MUL
+        self.branchtable[self.PUSH] = self.handle_PUSH
+        self.branchtable[self.POP] = self.handle_POP
 
     def load(self):
         """Load a program into memory."""
@@ -94,14 +99,14 @@ class CPU:
 
     def ram_write(self,value,address):
         
-        self.reg[address] =  value
+        self.ram[address] = value
 
     def handle_LDI(self):
         
         address = self.ram_read(self.pc + 1)
         value = self.ram_read(self.pc + 2)
 
-        self.ram_write(value,address)
+        self.reg[address] = value
 
         self.pc += 2
 
@@ -121,7 +126,30 @@ class CPU:
         value = self.alu("MUL", registerA, registerB)
 
         self.pc += 2
+    
+    def handle_PUSH(self):
+        self.SP -= 1
+
+        address = self.ram_read(self.pc+1)
+
+        value = self.reg[address]
+
+        self.ram_write(value, self.SP)
+
+        self.pc += 1
+
+    def handle_POP(self):
+
+        value = self.ram_read(self.SP)
+
+
+        address = self.ram_read(self.pc + 1)
+
+        self.reg[address] = value
         
+        self.SP += 1
+        self.pc += 1
+
     def handle_HLT(self):
 
         self.running = False
@@ -138,7 +166,7 @@ class CPU:
 
                 self.branchtable[command]()
             else:
-                print(f"Error {bin(command)} not Found")
+                print(f"Error Command:{command} not Found")
             
 
             self.pc += 1
