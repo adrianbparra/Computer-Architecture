@@ -11,20 +11,27 @@ class CPU:
         self.reg = [0] * 8
         self.running = True
         self.pc = 0
-        self.SP = 0xF4
+        # self.SP = 0xF4
+        self.reg[7] = 0xF4
         self.LDI = 0b10000010
         self.PRN = 0b01000111
         self.HLT = 0b00000001
         self.MUL = 0b10100010
+        self.ADD = 0b10100000
         self.PUSH = 0b01000101
         self.POP = 0b01000110
+        self.CALL = 0b01010000
+        self.RET = 0b00010001
         self.branchtable = {}
         self.branchtable[self.LDI] = self.handle_LDI
         self.branchtable[self.PRN] = self.handle_PRN
         self.branchtable[self.HLT] = self.handle_HLT
         self.branchtable[self.MUL] = self.handle_MUL
+        self.branchtable[self.ADD] = self.handle_ADD
         self.branchtable[self.PUSH] = self.handle_PUSH
         self.branchtable[self.POP] = self.handle_POP
+        self.branchtable[self.CALL] = self.handle_CALL
+        self.branchtable[self.RET] = self.handle_RET
 
     def load(self):
         """Load a program into memory."""
@@ -40,8 +47,8 @@ class CPU:
             
             address = 0
 
-            with open(f"C:\\Users\\PC1\\Documents\\Lambda_School\\Computer_Architecture\\Computer-Architecture\\ls8\\examples\\{sys.argv[1]}") as f:
-                print(f"Running file '{sys.argv[1]}'")
+            with open(f"C:\\Users\\PC1\\Documents\\Lambda_School\\Computer_Architecture\\Computer-Architecture\\ls8\\examples\\{sys.argv[1]}.ls8") as f:
+                print(f"Running file '{sys.argv[1]}.ls8'")
                 print("--------------------------------")
 
                 for line in f:
@@ -64,7 +71,6 @@ class CPU:
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
-
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         #elif op == "SUB": etc
@@ -105,6 +111,7 @@ class CPU:
         
         address = self.ram_read(self.pc + 1)
         value = self.ram_read(self.pc + 2)
+        # print("LDI: ",int(value))
 
         self.reg[address] = value
 
@@ -114,7 +121,7 @@ class CPU:
 
         address = self.ram_read(self.pc + 1)
 
-        print(self.reg[address])
+        print("PRINTING: ",self.reg[address])
 
         self.pc += 1
 
@@ -123,32 +130,72 @@ class CPU:
         registerA = self.ram_read(self.pc + 1)
         registerB = self.ram_read(self.pc + 2)
 
-        value = self.alu("MUL", registerA, registerB)
+        self.alu("MUL", registerA, registerB)
 
         self.pc += 2
-    
+
+    def handle_ADD(self):
+
+        registerA = self.ram_read(self.pc + 1)
+        registerB = self.ram_read(self.pc + 2)
+
+        self.alu("ADD", registerA, registerB)
+        
+        self.pc += 2
+        
     def handle_PUSH(self):
-        self.SP -= 1
+        self.reg[7] -= 1
 
         address = self.ram_read(self.pc+1)
 
         value = self.reg[address]
 
-        self.ram_write(value, self.SP)
+        self.ram_write(value, self.reg[7])
 
         self.pc += 1
 
     def handle_POP(self):
 
-        value = self.ram_read(self.SP)
+        value = self.ram_read(self.reg[7])
 
 
         address = self.ram_read(self.pc + 1)
 
         self.reg[address] = value
         
-        self.SP += 1
+        self.reg[7] += 1
         self.pc += 1
+    def handle_CALL(self):
+    # calls a subroutine at address stored in register
+        # save next address to stack
+        next_command = self.pc + 2
+
+        self.reg[7] -= 1
+
+        self.ram_write(next_command, self.reg[7])
+        # print(f"save: {self.pc+2} to ram: {stack_address}")
+        # print(self.ram)
+
+        # address to save
+        register_number = self.ram_read(self.pc + 1)
+
+        address_jump = self.reg[register_number]
+        # print("Address :", address_jump)
+
+        # pc is set to address stored in register
+        self.pc = address_jump - 1
+        # print(f"save pc to {self.reg[address]}")
+ 
+    def handle_RET(self):
+        # get saved pc in reg
+        stack_pointer = self.reg[7]
+        saved_pc =  self.ram_read(stack_pointer)
+        # print("Return: ", int(saved_pc))
+        
+        # increment stack
+        self.reg[7] += 1
+        # save address to pc
+        self.pc = saved_pc - 1
 
     def handle_HLT(self):
 
@@ -159,14 +206,16 @@ class CPU:
         
         while self.running:
             # self.trace()
+            # print("Command I: ",int(self.pc))
             
             command = self.ram[self.pc]
-
+            
             if command in self.branchtable:
+
 
                 self.branchtable[command]()
             else:
-                print(f"Error Command:{command} not Found")
+                print(f"Error:{command} not Found at PC:{self.pc}")
             
 
             self.pc += 1
