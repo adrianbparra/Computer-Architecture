@@ -60,7 +60,12 @@ but you'll have to implement those three above instructions first!
 ## Step 0: IMPORTANT: inventory what is here!
 
 * Make a list of files here.
+  cpu.py
+  ls8.py
+  examples
 * Write a short 3-10-word description of what each file does.
+  cpu.py : Is the creation and the cpu it self. How it runs and what it does
+  ls8.py : runs and test the cpu on what is in the ram
 * Note what has been implemented, and what hasn't.
 * Read this whole file.
 * Skim the spec.
